@@ -1,0 +1,1664 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>休暇抽選申し込みシステム</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .content {
+            padding: 20px;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            border: none;
+            background: #f0f0f0;
+            border-radius: 10px;
+            cursor: pointer;
+            white-space: nowrap;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .date-list-item {
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .date-list-item:hover {
+            border-color: #667eea;
+        }
+
+        .date-list-item.has-selection {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .date-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .date-list-left {
+            flex: 1;
+        }
+
+        .date-list-date {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+
+        .date-list-day {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .date-list-points {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .date-list-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .shift-toggle {
+            display: flex;
+            gap: 5px;
+        }
+
+        .shift-toggle-btn {
+            padding: 8px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .shift-toggle-btn:hover {
+            border-color: #667eea;
+        }
+
+        .shift-toggle-btn.active {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+
+        .point-controls {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .point-btn {
+            width: 36px;
+            height: 36px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            background: white;
+            color: #667eea;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .point-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .point-btn:active {
+            transform: scale(0.95);
+        }
+
+        .point-display {
+            min-width: 50px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            width: 100%;
+            padding: 15px;
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+
+        .btn-secondary:hover {
+            background: #f0f4ff;
+        }
+
+        .entry-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .entry-item {
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            background: #fafafa;
+        }
+
+        .entry-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .entry-name {
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .entry-date {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .entry-details {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .entry-badge {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-early {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-late {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .badge-points {
+            background: #e7e7ff;
+            color: #667eea;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .login-form {
+            padding: 20px;
+        }
+
+        .admin-menu {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .admin-card {
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .admin-card:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .admin-card-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .close-modal {
+            float: right;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .user-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .user-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .user-info {
+            flex: 1;
+        }
+
+        .user-badge {
+            padding: 4px 8px;
+            background: #e7e7ff;
+            color: #667eea;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌿 休暇抽選申し込み</h1>
+        </div>
+
+        <div class="content">
+            <div class="tab-buttons">
+                <button class="tab-btn active" onclick="switchTab('application', event)">抽選申し込み</button>
+                <button class="tab-btn" onclick="switchTab('status', event)">応募状況</button>
+                <button class="tab-btn" onclick="switchTab('results', event)">抽選結果</button>
+                <button class="tab-btn" onclick="switchTab('cancel', event)">取り消し</button>
+                <button class="tab-btn" onclick="switchTab('admin', event)">管理者</button>
+            </div>
+
+            <!-- 抽選申し込み -->
+            <div id="application" class="tab-content active">
+                <div class="input-group">
+                    <label>襟番</label>
+                    <input type="number" id="collarNumber" placeholder="例: 123">
+                </div>
+                <div class="input-group">
+                    <label>名前</label>
+                    <input type="text" id="userName" placeholder="山田 太郎">
+                </div>
+
+                <div class="alert alert-warning" style="margin-bottom: 20px;">
+                    <strong>残りポイント: <span id="remainingPoints" style="font-size: 20px; color: #667eea;">6</span> / 6</strong>
+                </div>
+
+                <div class="input-group">
+                    <label>希望日を選択してください</label>
+                    <div id="dateList"></div>
+                </div>
+
+                <div id="summarySection" style="margin-top: 30px;">
+                    <h3 style="margin-bottom: 15px;">申し込み内容</h3>
+                    <div id="entrySummary"></div>
+                    <button class="btn-primary" onclick="submitApplication()" style="margin-top: 20px;">申し込みを送信</button>
+                </div>
+            </div>
+
+            <!-- 応募状況 -->
+            <div id="status" class="tab-content">
+                <input type="text" class="search-box" id="statusSearch" placeholder="襟番で検索..." oninput="filterStatus()">
+                <div class="entry-list" id="statusList"></div>
+            </div>
+
+            <!-- 抽選結果 -->
+            <div id="results" class="tab-content">
+                <input type="text" class="search-box" id="resultsSearch" placeholder="襟番で検索..." oninput="filterResults()">
+                <div class="entry-list" id="resultsList"></div>
+            </div>
+
+            <!-- 取り消し -->
+            <div id="cancel" class="tab-content">
+                <div class="login-form">
+                    <div class="input-group">
+                        <label>襟番</label>
+                        <input type="number" id="cancelCollarNumber" placeholder="例: 123">
+                    </div>
+                    <div class="input-group">
+                        <label>パスワード</label>
+                        <input type="password" id="cancelPassword" placeholder="パスワード">
+                    </div>
+                    <button class="btn-primary" onclick="loginForCancel()">ログイン</button>
+                </div>
+                <div id="cancelContent" style="display: none;">
+                    <h3 style="margin-bottom: 15px;">あなたの応募</h3>
+                    <div class="entry-list" id="userEntries"></div>
+                </div>
+            </div>
+
+            <!-- 管理者 -->
+            <div id="admin" class="tab-content">
+                <div class="login-form" id="adminLoginForm">
+                    <div class="input-group">
+                        <label>管理者ID</label>
+                        <input type="text" id="adminId" placeholder="admin">
+                    </div>
+                    <div class="input-group">
+                        <label>パスワード</label>
+                        <input type="password" id="adminPassword" placeholder="パスワード">
+                    </div>
+                    <button class="btn-primary" onclick="adminLogin()">ログイン</button>
+                </div>
+                <div id="adminContent" style="display: none;">
+                    <!-- 追加: ログイン中管理者情報と操作 -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <div>ログイン: <strong id="currentAdminLabel"></strong></div>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn-secondary" onclick="openModal('adminPasswordModal')">パスワード変更</button>
+                            <button class="btn-secondary" onclick="adminLogout()">ログアウト</button>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-bottom: 20px;">管理者メニュー</h3>
+                    <div class="admin-menu">
+                        <div class="admin-card" onclick="openModal('dateSettingModal')">
+                            <div class="admin-card-icon">📅</div>
+                            <div>抽選日程設定</div>
+                        </div>
+                        <div class="admin-card" onclick="executeLottery()">
+                            <div class="admin-card-icon">🎲</div>
+                            <div>抽選開始</div>
+                        </div>
+                        <div class="admin-card" onclick="openModal('entryManageModal')">
+                            <div class="admin-card-icon">📝</div>
+                            <div>応募管理</div>
+                        </div>
+                        <div class="admin-card" onclick="openModal('overPointModal')">
+                            <div class="admin-card-icon">⚠️</div>
+                            <div>7P以上使用者</div>
+                        </div>
+                        <div class="admin-card" onclick="openModal('userManageModal')">
+                            <div class="admin-card-icon">👥</div>
+                            <div>ユーザー管理</div>
+                        </div>
+                        <div class="admin-card" onclick="openModal('cancelHistoryModal')">
+                            <div class="admin-card-icon">📋</div>
+                            <div>取り消し履歴</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- モーダル群 -->
+    <div id="dateSettingModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal('dateSettingModal')">&times;</span>
+            <div class="modal-header">抽選日程設定</div>
+            <div class="input-group">
+                <label>開始日</label>
+                <input type="date" id="lotteryStartDate">
+            </div>
+            <div class="input-group">
+                <label>終了日</label>
+                <input type="date" id="lotteryEndDate">
+            </div>
+            <div class="input-group">
+                <label>応募締切日時</label>
+                <input type="datetime-local" id="applicationDeadline">
+            </div>
+            <button class="btn-primary" onclick="saveDateSettings()">設定を保存</button>
+        </div>
+    </div>
+
+    <div id="userManageModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal('userManageModal')">&times;</span>
+            <div class="modal-header">ユーザー管理</div>
+            <div class="input-group">
+                <label>襟番</label>
+                <input type="number" id="newUserCollar" placeholder="123">
+            </div>
+            <div class="input-group">
+                <label>名前</label>
+                <input type="text" id="newUserName" placeholder="山田 太郎">
+            </div>
+            <div class="input-group">
+                <label>班</label>
+                <select id="newUserTeam">
+                    <option value="">班を選択</option>
+                    <option value="1班">1班</option>
+                    <option value="2班">2班</option>
+                    <option value="3班">3班</option>
+                    <option value="4班">4班</option>
+                    <option value="5班">5班</option>
+                    <option value="6班">6班</option>
+                    <option value="7班">7班</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>パスワード</label>
+                <input type="password" id="newUserPassword" placeholder="パスワード">
+            </div>
+            <button class="btn-primary" onclick="addUser()">ユーザーを追加</button>
+            <h3 style="margin: 20px 0 10px 0;">登録済みユーザー</h3>
+            <div class="user-list" id="userList"></div>
+        </div>
+    </div>
+
+    <div id="entryManageModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal('entryManageModal')">&times;</span>
+            <div class="modal-header">応募管理</div>
+            <input type="text" class="search-box" placeholder="襟番で検索..." oninput="filterAdminEntries(this.value)">
+            <div class="entry-list" id="adminEntryList"></div>
+        </div>
+    </div>
+
+    <div id="overPointModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal('overPointModal')">&times;</span>
+            <div class="modal-header">7ポイント以上使用者一覧</div>
+            <div class="entry-list" id="overPointList"></div>
+        </div>
+    </div>
+
+    <div id="cancelHistoryModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal('cancelHistoryModal')">&times;</span>
+            <div class="modal-header">取り消し履歴</div>
+            <div class="entry-list" id="cancelHistoryList"></div>
+        </div>
+    </div>
+
+    <!-- 追加: 管理者パスワード変更モーダル -->
+    <div id="adminPasswordModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal('adminPasswordModal')">&times;</span>
+            <div class="modal-header">パスワード変更</div>
+            <div class="input-group">
+                <label>現在のパスワード</label>
+                <input type="password" id="adminOldPassword" placeholder="現在のパスワード">
+            </div>
+            <div class="input-group">
+                <label>新しいパスワード</label>
+                <input type="password" id="adminNewPassword" placeholder="新しいパスワード">
+            </div>
+            <div class="input-group">
+                <label>新しいパスワード（確認）</label>
+                <input type="password" id="adminNewPasswordConfirm" placeholder="確認用">
+            </div>
+            <button class="btn-primary" onclick="changeAdminPassword()">変更する</button>
+        </div>
+    </div>
+
+    <script>
+        // データストレージ（メモリ内）
+        let appData = {
+            entries: [],
+            users: [],
+            lotteryResults: [],
+            cancelHistory: [],
+            settings: {
+                startDate: null,
+                endDate: null,
+                deadline: null
+            },
+            currentUser: {
+                collarNumber: '',
+                name: '',
+                selections: {}
+            },
+            // 現在ログイン中の管理者（存在しない場合は null）
+            currentAdmin: null
+        };
+        
+        // 合計ポイント計算
+        function getTotalPoints() {
+            let total = 0;
+            for (let date in appData.currentUser.selections) {
+                total += appData.currentUser.selections[date].points || 0;
+            }
+            return total;
+        }
+
+        // 初期化
+        function init() {
+            generateDateList();
+            updatePointsDisplay();
+            loadDemoData();
+        }
+
+        // デモデータ
+        function loadDemoData() {
+            // 通常ユーザー
+            appData.users = [
+                { collar: 101, name: '山田太郎', team: '1班', password: 'pass123', role: 'user' },
+                { collar: 102, name: '佐藤花子', team: '1班', password: 'pass123', role: 'user' },
+                { collar: 201, name: '鈴木一郎', team: '2班', password: 'pass123', role: 'user' }
+            ];
+
+            // 管理者（1班〜7班をそれぞれ1名ずつ）
+            const adminBase = 900; // 衝突しない襟番領域
+            for (let i = 1; i <= 7; i++) {
+                appData.users.push({
+                    collar: adminBase + i,
+                    id: `admin${i}`,                // 追加: 管理者ID (admin1..admin7)
+                    name: `管理者 ${i}班`,
+                    team: `${i}班`,
+                    password: `admin${i}`,         // 初期PWはIDと同じ
+                    role: 'admin'
+                });
+            }
+             refreshUserList();
+         }
+
+        // 日付リスト生成
+        function generateDateList() {
+            const list = document.getElementById('dateList');
+            list.innerHTML = '';
+            
+            if (!appData.settings.startDate || !appData.settings.endDate) {
+                list.innerHTML = '<div class="alert alert-warning">管理者が抽選日程を設定するまでお待ちください</div>';
+                return;
+            }
+            
+            const startDate = new Date(appData.settings.startDate);
+            const endDate = new Date(appData.settings.endDate);
+            const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
+
+            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                const year = d.getFullYear();
+                const month = d.getMonth();
+                const day = d.getDate();
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayName = dayNames[d.getDay()];
+                
+                const selection = appData.currentUser.selections[dateStr];
+                const hasSelection = selection && selection.points > 0;
+                
+                const item = document.createElement('div');
+                item.className = `date-list-item ${hasSelection ? 'has-selection' : ''}`;
+                item.id = `date-item-${dateStr}`;
+                item.innerHTML = `
+                    <div class="date-list-header">
+                        <div class="date-list-left">
+                            <div class="date-list-date">${month + 1}月${day}日（${dayName}）</div>
+                            <div class="date-list-day">${dateStr}</div>
+                        </div>
+                        <div class="date-list-points" id="points-${dateStr}">${hasSelection ? selection.points + 'P' : '-'}</div>
+                    </div>
+                    <div class="date-list-controls">
+                        <div class="shift-toggle">
+                            <button class="shift-toggle-btn ${selection?.shift === 'early' ? 'active' : ''}" onclick="toggleShift('${dateStr}', 'early', event)">☀️ 早番</button>
+                            <button class="shift-toggle-btn ${selection?.shift === 'late' ? 'active' : ''}" onclick="toggleShift('${dateStr}', 'late', event)">🌙 遅番</button>
+                        </div>
+                        <div class="point-controls">
+                            <button class="point-btn" onclick="decreasePoint('${dateStr}')">−</button>
+                            <div class="point-display" id="point-value-${dateStr}">${selection?.points || 0}</div>
+                            <button class="point-btn" onclick="increasePoint('${dateStr}')">＋</button>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(item);
+            }
+        }
+
+        // シフト切り替え
+        function toggleShift(dateStr, shift, event) {
+            if (!appData.currentUser.selections[dateStr]) {
+                appData.currentUser.selections[dateStr] = { points: 0 };
+            }
+            
+            appData.currentUser.selections[dateStr].shift = shift;
+            
+            // ボタンの状態更新
+            const item = document.getElementById(`date-item-${dateStr}`);
+            if (item) {
+                const buttons = item.querySelectorAll('.shift-toggle-btn');
+                buttons.forEach(btn => btn.classList.remove('active'));
+                const targetButton = event?.target?.closest('.shift-toggle-btn');
+                if (targetButton) {
+                    targetButton.classList.add('active');
+                }
+            }
+            
+            updateEntrySummary();
+        }
+
+        // ポイント増加
+        function increasePoint(dateStr) {
+            const current = appData.currentUser.selections[dateStr]?.points || 0;
+            const total = getTotalPoints();
+            
+            if (total >= 6) {
+                alert('合計ポイントが6を超えることはできません');
+                return;
+            }
+            
+            if (!appData.currentUser.selections[dateStr]) {
+                appData.currentUser.selections[dateStr] = { points: 0 };
+            }
+            
+            appData.currentUser.selections[dateStr].points = current + 1;
+            
+            updateDateDisplay(dateStr);
+            updatePointsDisplay();
+            updateEntrySummary();
+        }
+
+        // ポイント減少
+        function decreasePoint(dateStr) {
+            const current = appData.currentUser.selections[dateStr]?.points || 0;
+            
+            if (current <= 0) {
+                return;
+            }
+            
+            appData.currentUser.selections[dateStr].points = current - 1;
+            
+            if (appData.currentUser.selections[dateStr].points === 0) {
+                delete appData.currentUser.selections[dateStr];
+            }
+            
+            updateDateDisplay(dateStr);
+            updatePointsDisplay();
+            updateEntrySummary();
+        }
+
+        // 日付表示更新
+        function updateDateDisplay(dateStr) {
+            const selection = appData.currentUser.selections[dateStr];
+            const pointValueEl = document.getElementById(`point-value-${dateStr}`);
+            const pointsEl = document.getElementById(`points-${dateStr}`);
+            const itemEl = document.getElementById(`date-item-${dateStr}`);
+            
+            if (selection && selection.points > 0) {
+                pointValueEl.textContent = selection.points;
+                pointsEl.textContent = selection.points + 'P';
+                itemEl.classList.add('has-selection');
+                
+                const buttons = itemEl.querySelectorAll('.shift-toggle-btn');
+                buttons.forEach(btn => btn.classList.remove('active'));
+                if (selection.shift) {
+                    const activeButton = itemEl.querySelector(`.shift-toggle-btn[onclick*="'${selection.shift}'"]`);
+                    if (activeButton) {
+                        activeButton.classList.add('active');
+                    }
+                }
+            } else {
+                pointValueEl.textContent = '0';
+                pointsEl.textContent = '-';
+                itemEl.classList.remove('has-selection');
+                
+                const buttons = itemEl.querySelectorAll('.shift-toggle-btn');
+                buttons.forEach(btn => btn.classList.remove('active'));
+            }
+        }
+
+        // ポイント表示更新
+        function updatePointsDisplay() {
+            const total = getTotalPoints();
+            const remaining = 6 - total;
+            document.getElementById('remainingPoints').textContent = remaining;
+        }
+
+        // 申し込み内容サマリー更新
+        function updateEntrySummary() {
+            const summary = document.getElementById('entrySummary');
+            summary.innerHTML = '';
+            
+            for (let date in appData.currentUser.selections) {
+                const sel = appData.currentUser.selections[date];
+                if (sel.points > 0) {
+                    const item = document.createElement('div');
+                    item.className = 'entry-item';
+                    item.innerHTML = `
+                        <div class="entry-item-header">
+                            <span class="entry-date">${date}</span>
+                            <button onclick="removeEntry('${date}')" style="background: #ff4444; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;">削除</button>
+                        </div>
+                        <div class="entry-details">
+                            <span class="entry-badge ${sel.shift === 'early' ? 'badge-early' : 'badge-late'}">
+                                ${sel.shift === 'early' ? '☀️ 早番' : '🌙 遅番'}
+                            </span>
+                            <span class="entry-badge badge-points">${sel.points}ポイント</span>
+                        </div>
+                    `;
+                    summary.appendChild(item);
+                }
+            }
+        }
+
+        // エントリー削除
+        function removeEntry(date) {
+            delete appData.currentUser.selections[date];
+            updateDateDisplay(date);
+            updatePointsDisplay();
+            updateEntrySummary();
+            generateDateList();
+        }
+
+        // 申し込み送信
+        function submitApplication() {
+    const collarNumber = document.getElementById('collarNumber').value;
+    const userName = document.getElementById('userName').value;
+
+    if (!collarNumber || !userName) {
+        alert('襟番と名前を入力してください');
+        return;
+    }
+
+    const total = getTotalPoints();
+    if (total === 0) {
+        alert('少なくとも1日を選択してください');
+        return;
+    }
+
+    // 🔽 ここを追加
+    for (let date in appData.currentUser.selections) {
+        const sel = appData.currentUser.selections[date];
+        if (sel.points > 0 && !sel.shift) {
+            alert(`${date} のシフト（早番／遅番）を選択してください`);
+            return;
+        }
+    }
+
+    const existingTotal = appData.entries
+        .filter(e => e.collar === collarNumber)
+        .reduce((sum, e) => sum + e.points, 0);
+
+    if (existingTotal + total > 6) {
+        alert(`すでに${existingTotal}ポイント使用しています。合計6ポイントを超えることはできません。`);
+        return;
+    }
+
+    for (let date in appData.currentUser.selections) {
+        const sel = appData.currentUser.selections[date];
+        if (sel.points > 0) {
+            appData.entries.push({
+                collar: collarNumber,
+                name: userName,
+                date: date,
+                shift: sel.shift,
+                points: sel.points,
+                timestamp: new Date().toISOString()
+            });
+        }
+    }
+
+    alert('申し込みが完了しました！');
+
+    appData.currentUser.selections = {};
+    document.getElementById('collarNumber').value = '';
+    document.getElementById('userName').value = '';
+    updatePointsDisplay();
+    updateEntrySummary();
+    generateDateList();
+    refreshStatusList();
+}
+
+
+        // 応募状況リスト更新
+        function refreshStatusList() {
+            const list = document.getElementById('statusList');
+            list.innerHTML = '';
+            
+            if (appData.entries.length === 0) {
+                list.innerHTML = '<div class="alert alert-warning">まだ応募がありません</div>';
+                return;
+            }
+
+            // 日付×シフトでグループ化
+            const grouped = {};
+            appData.entries.forEach(entry => {
+                const key = `${entry.date}-${entry.shift}`;
+                if (!grouped[key]) {
+                    grouped[key] = {
+                        date: entry.date,
+                        shift: entry.shift,
+                        entries: []
+                    };
+                }
+                grouped[key].entries.push(entry);
+            });
+
+            // 日付順にソート
+            const sortedKeys = Object.keys(grouped).sort((a, b) => {
+                const dateA = grouped[a].date;
+                const dateB = grouped[b].date;
+                if (dateA !== dateB) return dateA.localeCompare(dateB);
+                return grouped[a].shift.localeCompare(grouped[b].shift);
+            });
+
+            sortedKeys.forEach(key => {
+                const group = grouped[key];
+                const item = document.createElement('div');
+                item.className = 'entry-item';
+                
+                // 応募者リストを作成
+                const participantsList = group.entries.map(e => 
+                    `<div style="padding: 5px 0; border-bottom: 1px solid #e0e0e0;">
+                        <span style="font-weight: bold;">襟番 ${e.collar}</span> - ${e.name} 
+                        <span class="entry-badge badge-points" style="margin-left: 10px;">${e.points}P</span>
+                    </div>`
+                ).join('');
+                
+                // 合計ポイント計算
+const totalPoints = group.entries.reduce((sum, e) => sum + e.points, 0);
+
+item.innerHTML = `
+    <div class="entry-item-header">
+        <div>
+            <div class="entry-date" style="font-size: 18px; font-weight: bold;">${group.date}</div>
+            <span class="entry-badge ${group.shift === 'early' ? 'badge-early' : 'badge-late'}" style="margin-top: 5px; display: inline-block;">
+                ${group.shift === 'early' ? '☀️ 早番' : '🌙 遅番'}
+            </span>
+        </div>
+        <div style="text-align: right;">
+    <div style="font-size: 24px; font-weight: bold; color: #667eea;">${totalPoints}P</div>
+    <div style="font-size: 14px; color: #555;">${group.entries.length}名</div>
+</div>
+
+    </div>
+    <div style="margin-top: 15px; padding-top: 10px; border-top: 2px solid #e0e0e0;">
+        ${participantsList}
+    </div>
+`;
+
+                list.appendChild(item);
+            });
+        }
+
+        // 応募状況フィルター
+        function filterStatus() {
+            const search = document.getElementById('statusSearch').value;
+            const list = document.getElementById('statusList');
+            list.innerHTML = '';
+            
+            const filtered = appData.entries.filter(e => 
+                search === '' || e.collar.toString().includes(search)
+            );
+
+            if (filtered.length === 0) {
+                list.innerHTML = '<div class="alert alert-warning">該当する応募がありません</div>';
+                return;
+            }
+
+            // 日付×シフトでグループ化
+            const grouped = {};
+            filtered.forEach(entry => {
+                const key = `${entry.date}-${entry.shift}`;
+                if (!grouped[key]) {
+                    grouped[key] = {
+                        date: entry.date,
+                        shift: entry.shift,
+                        entries: []
+                    };
+                }
+                grouped[key].entries.push(entry);
+            });
+
+            // 日付順にソート
+            const sortedKeys = Object.keys(grouped).sort((a, b) => {
+                const dateA = grouped[a].date;
+                const dateB = grouped[b].date;
+                if (dateA !== dateB) return dateA.localeCompare(dateB);
+                return grouped[a].shift.localeCompare(grouped[b].shift);
+            });
+
+            sortedKeys.forEach(key => {
+                const group = grouped[key];
+                const item = document.createElement('div');
+                item.className = 'entry-item';
+                
+                // 応募者リストを作成
+                const participantsList = group.entries.map(e => 
+                    `<div style="padding: 5px 0; border-bottom: 1px solid #e0e0e0;">
+                        <span style="font-weight: bold;">襟番 ${e.collar}</span> - ${e.name} 
+                        <span class="entry-badge badge-points" style="margin-left: 10px;">${e.points}P</span>
+                    </div>`
+                ).join('');
+                
+                item.innerHTML = `
+                    <div class="entry-item-header">
+                        <div>
+                            <div class="entry-date" style="font-size: 18px; font-weight: bold;">${group.date}</div>
+                            <span class="entry-badge ${group.shift === 'early' ? 'badge-early' : 'badge-late'}" style="margin-top: 5px; display: inline-block;">
+                                ${group.shift === 'early' ? '☀️ 早番' : '🌙 遅番'}
+                            </span>
+                        </div>
+                        <span style="font-size: 24px; font-weight: bold; color: #667eea;">${group.entries.length}名</span>
+                    </div>
+                    <div style="margin-top: 15px; padding-top: 10px; border-top: 2px solid #e0e0e0;">
+                        ${participantsList}
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // 取り消しログイン
+        function loginForCancel() {
+            const collar = document.getElementById('cancelCollarNumber').value;
+            const password = document.getElementById('cancelPassword').value;
+            
+            const user = appData.users.find(u => 
+                u.collar.toString() === collar && u.password === password
+            );
+        
+            if (user) {
+                document.querySelector('#cancel .login-form').style.display = 'none';
+                document.getElementById('cancelContent').style.display = 'block';
+                showUserEntries(collar);
+            } else {
+                alert('襟番またはパスワードが正しくありません');
+            }
+        }
+
+        // ユーザーのエントリー表示
+        function showUserEntries(collar) {
+            const list = document.getElementById('userEntries');
+            list.innerHTML = '';
+            
+            const userEntries = appData.entries.filter(e => e.collar.toString() === collar);
+            
+            if (userEntries.length === 0) {
+                list.innerHTML = '<div class="alert alert-warning">あなたの応募はありません</div>';
+                return;
+            }
+
+            userEntries.forEach((entry) => {
+                const item = document.createElement('div');
+                item.className = 'entry-item';
+                item.innerHTML = `
+                    <div class="entry-item-header">
+                        <span class="entry-date">${entry.date}</span>
+                        <button onclick="cancelEntry('${entry.collar}', '${entry.date}', '${entry.shift}', '${collar}')" style="background: #ff4444; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">取り消し</button>
+                    </div>
+                    <div class="entry-details">
+                        <span class="entry-badge ${entry.shift === 'early' ? 'badge-early' : 'badge-late'}">
+                            ${entry.shift === 'early' ? '☀️ 早番' : '🌙 遅番'}
+                        </span>
+                        <span class="entry-badge badge-points">${entry.points}ポイント</span>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // エントリー取り消し
+        function cancelEntry(entryCollar, entryDate, entryShift, currentUserCollar) {
+            if (!confirm('本当にこの応募を取り消しますか？')) {
+                return;
+            }
+        
+            const entryIndex = appData.entries.findIndex(e => 
+                e.collar.toString() === entryCollar && 
+                e.date === entryDate && 
+                e.shift === entryShift
+            );
+        
+            if (entryIndex === -1) {
+                alert('エントリーが見つかりませんませんでした');
+                return;
+            }
+        
+            const entry = appData.entries[entryIndex];
+            
+            // 実行者の名前も保存（見やすくするため）
+            const canceledByUser = appData.users.find(u => u.collar.toString() === currentUserCollar);
+            appData.cancelHistory.push({
+                collar: entry.collar,
+                name: entry.name,
+                date: entry.date,
+                shift: entry.shift,
+                points: entry.points,
+                canceledBy: currentUserCollar,
+                canceledByName: canceledByUser ? canceledByUser.name : currentUserCollar,
+                canceledAt: new Date().toISOString()
+            });
+        
+            appData.entries.splice(entryIndex, 1);
+            
+            alert('応募を取り消しました');
+            showUserEntries(currentUserCollar);
+            refreshStatusList();
+        }
+
+        // 管理者ログイン
+        function adminLogin() {
+            const id = document.getElementById('adminId').value.trim();
+            const password = document.getElementById('adminPassword').value;
+
+            // 管理者アカウントは appData.users に role: 'admin' として登録してあるため、
+            // 管理者ID（admin1等）または襟番（数値）または名前で認証できるようにする
+            const admin = appData.users.find(u =>
+                u.role === 'admin' &&
+                (
+                    (u.id && u.id === id) ||        // 追加: 管理者IDでログイン可能
+                    u.collar.toString() === id ||
+                    u.name === id
+                ) &&
+                u.password === password
+            );
+
+            if (admin) {
+                appData.currentAdmin = admin;
+                document.getElementById('adminLoginForm').style.display = 'none';
+                document.getElementById('adminContent').style.display = 'block';
+                // 現在の管理者表示を更新
+                const label = document.getElementById('currentAdminLabel');
+                if (label) {
+                    label.textContent = admin.id ? `${admin.id}（${admin.team}）` : `襟番 ${admin.collar}`;
+                }
+            } else {
+                alert('IDまたはパスワードが正しくありません');
+            }
+         }
+        
+        // 抽選実行
+        function executeLottery() {
+            if (!confirm('抽選を実行しますか？')) {
+                return;
+            }
+
+            appData.lotteryResults = [];
+            
+            const groups = {};
+            appData.entries.forEach(entry => {
+                const key = `${entry.date}-${entry.shift}`;
+                if (!groups[key]) {
+                    groups[key] = [];
+                }
+                for (let i = 0; i < entry.points; i++) {
+                    groups[key].push(entry);
+                }
+            });
+
+            for (let key in groups) {
+                const entries = groups[key];
+                const [date, shift] = key.split('-');
+                
+                const shuffled = entries.sort(() => Math.random() - 0.5);
+                
+                shuffled.forEach((entry, index) => {
+                    appData.lotteryResults.push({
+                        collar: entry.collar,
+                        name: entry.name,
+                        date: date,
+                        shift: shift,
+                        number: index + 1,
+                        drawnAt: new Date().toISOString()
+                    });
+                });
+            }
+
+            alert('抽選が完了しました！');
+            refreshResultsList();
+        }
+
+        // 抽選結果リスト更新
+        function refreshResultsList() {
+            const list = document.getElementById('resultsList');
+            list.innerHTML = '';
+
+            if (appData.lotteryResults.length === 0) {
+                list.innerHTML = '<div class="alert alert-warning">まだ抽選が実行されていません</div>';
+                return;
+            }
+
+            // 日付ごとにグループ化
+            const grouped = {};
+            appData.lotteryResults.forEach(result => {
+                if (!grouped[result.date]) grouped[result.date] = [];
+                grouped[result.date].push(result);
+            });
+
+            // 日付昇順で表示
+            const sortedDates = Object.keys(grouped).sort();
+
+            sortedDates.forEach(date => {
+                // 日付見出し
+                const dateHeader = document.createElement('div');
+                dateHeader.style.cssText = 'font-size:18px;font-weight:bold;margin:18px 0 8px 0;color:#667eea;';
+                dateHeader.textContent = `${date}`;
+                list.appendChild(dateHeader);
+
+                // その日付内で順位順
+                const results = grouped[date].sort((a, b) => a.number - b.number);
+                results.forEach(result => {
+                    const item = document.createElement('div');
+                    item.className = 'entry-item';
+                    item.innerHTML = `
+                        <div class="entry-item-header">
+                            <span class="entry-name">襟番 ${result.collar} - ${result.name}</span>
+                            <span style="font-size: 24px; font-weight: bold; color: #667eea;">#${result.number}</span>
+                        </div>
+                        <div class="entry-details">
+                            <span class="entry-date">${result.date}</span>
+                            <span class="entry-badge ${result.shift === 'early' ? 'badge-early' : 'badge-late'}">
+                                ${result.shift === 'early' ? '☀️ 早番' : '🌙 遅番'}
+                            </span>
+                        </div>
+                    `;
+                    list.appendChild(item);
+                });
+            });
+        }
+
+        // 抽選結果フィルター
+        function filterResults() {
+            const search = document.getElementById('resultsSearch').value;
+            const list = document.getElementById('resultsList');
+            list.innerHTML = '';
+            
+            const filtered = appData.lotteryResults.filter(r => 
+                search === '' || r.collar.toString().includes(search)
+            );
+
+            if (filtered.length === 0) {
+                list.innerHTML = '<div class="alert alert-warning">該当する結果がありません</div>';
+                return;
+            }
+
+            const sorted = filtered.sort((a, b) => {
+                if (a.date !== b.date) return a.date.localeCompare(b.date);
+                if (a.shift !== b.shift) return a.shift.localeCompare(b.shift);
+                return a.number - b.number;
+            });
+
+            sorted.forEach(result => {
+                const item = document.createElement('div');
+                item.className = 'entry-item';
+                item.innerHTML = `
+                    <div class="entry-item-header">
+                        <span class="entry-name">襟番 ${result.collar} - ${result.name}</span>
+                        <span style="font-size: 24px; font-weight: bold; color: #667eea;">#${result.number}</span>
+                    </div>
+                    <div class="entry-details">
+                        <span class="entry-date">${result.date}</span>
+                        <span class="entry-badge ${result.shift === 'early' ? 'badge-early' : 'badge-late'}">
+                            ${result.shift === 'early' ? '☀️ 早番' : '🌙 遅番'}
+                        </span>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // ユーザー追加
+        function addUser() {
+            const collar = document.getElementById('newUserCollar').value;
+            const name = document.getElementById('newUserName').value;
+            const team = document.getElementById('newUserTeam').value;
+            const password = document.getElementById('newUserPassword').value;
+
+            if (!collar || !name || !team || !password) {
+                alert('すべての項目を入力してください');
+                return;
+            }
+
+            appData.users.push({
+                collar: parseInt(collar),
+                name: name,
+                team: team,
+                password: password
+            });
+
+            document.getElementById('newUserCollar').value = '';
+            document.getElementById('newUserName').value = '';
+            document.getElementById('newUserTeam').value = '';
+            document.getElementById('newUserPassword').value = '';
+
+            alert('ユーザーを追加しました');
+            refreshUserList();
+        }
+
+        // ユーザーリスト更新
+        function refreshUserList() {
+            const list = document.getElementById('userList');
+            list.innerHTML = '';
+
+            const teams = {};
+            appData.users.forEach(user => {
+                if (!teams[user.team]) {
+                    teams[user.team] = [];
+                }
+                teams[user.team].push(user);
+            });
+
+            for (let team in teams) {
+                const teamHeader = document.createElement('div');
+                teamHeader.style.cssText = 'font-weight: bold; padding: 10px; background: #f0f0f0; margin-top: 10px;';
+                teamHeader.textContent = team;
+                list.appendChild(teamHeader);
+
+                teams[team].forEach(user => {
+                    const item = document.createElement('div');
+                    item.className = 'user-item';
+                    item.innerHTML = `
+                        <div class="user-info">
+                            <div style="font-weight: bold;">${user.name}</div>
+                            <div style="font-size: 12px; color: #666;">襟番: ${user.collar}</div>
+                        </div>
+                        <span class="user-badge">${user.team}</span>
+                    `;
+                    list.appendChild(item);
+                });
+            }
+        }
+
+        // 管理者エントリーリスト更新
+        function refreshAdminEntryList() {
+            const list = document.getElementById('adminEntryList');
+            list.innerHTML = '';
+
+            if (appData.entries.length === 0) {
+                list.innerHTML = '<div class="alert alert-warning">応募がありません</div>';
+                return;
+            }
+
+            appData.entries.forEach((entry, index) => {
+                const item = document.createElement('div');
+                item.className = 'entry-item';
+                item.innerHTML = `
+                    <div class="entry-item-header">
+                        <span class="entry-name">襟番 ${entry.collar} - ${entry.name}</span>
+                        <button onclick="deleteEntryAdmin(${index})" style="background: #ff4444; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;">削除</button>
+                    </div>
+                    <div class="entry-details">
+                        <span class="entry-date">${entry.date}</span>
+                        <span class="entry-badge ${entry.shift === 'early' ? 'badge-early' : 'badge-late'}">
+                            ${entry.shift === 'early' ? '☀️ 早番' : '🌙 遅番'}
+                        </span>
+                        <span class="entry-badge badge-points">${entry.points}ポイント</span>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // 管理者エントリーフィルター
+        function filterAdminEntries(search) {
+            const list = document.getElementById('adminEntryList');
+            list.innerHTML = '';
+
+            const filtered = appData.entries.filter(e => 
+                search === '' || e.collar.toString().includes(search)
+            );
+
+            if (filtered.length === 0) {
+                list.innerHTML = '<div class="alert alert-warning">該当する応募がありません</div>';
+                return;
+            }
+
+            filtered.forEach((entry) => {
+                const item = document.createElement('div');
+                item.className = 'entry-item';
+                const originalIndex = appData.entries.indexOf(entry);
+                item.innerHTML = `
+                    <div class="entry-item-header">
+                        <span class="entry-name">襟番 ${entry.collar} - ${entry.name}</span>
+                        <button onclick="deleteEntryAdmin(${originalIndex})" style="background: #ff4444; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;">削除</button>
+                    </div>
+                    <div class="entry-details">
+                        <span class="entry-date">${entry.date}</span>
+                        <span class="entry-badge ${entry.shift === 'early' ? 'badge-early' : 'badge-late'}">
+                            ${entry.shift === 'early' ? '☀️ 早番' : '🌙 遅番'}
+                        </span>
+                        <span class="entry-badge badge-points">${entry.points}ポイント</span>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // 管理者エントリー削除
+        function deleteEntryAdmin(index) {
+    if (!confirm('この応募を削除しますか？')) {
+        return;
+    }
+    
+    const entry = appData.entries[index];
+    
+    // 🔽 履歴に追加（管理者削除）
+    const admin = appData.currentAdmin;
+    appData.cancelHistory.push({
+        collar: entry.collar,
+        name: entry.name,
+        date: entry.date,
+        shift: entry.shift,
+        points: entry.points,
+        canceledBy: admin ? admin.collar : '管理者',
+        canceledByName: admin ? admin.name : '管理者',
+        canceledAt: new Date().toISOString()
+    });
+    
+    // 応募データから削除
+    appData.entries.splice(index, 1);
+    
+    // 表示更新
+    refreshAdminEntryList();
+    alert('削除しました');
+    
+    // 🔽 履歴画面が開いていたら即反映
+    refreshCancelHistory();
+}
+        
+        
+        // 7ポイント以上使用者リスト更新
+        function refreshOverPointList() {
+            const list = document.getElementById('overPointList');
+            list.innerHTML = '';
+
+            const userPoints = {};
+            appData.entries.forEach(entry => {
+                if (!userPoints[entry.collar]) {
+                    userPoints[entry.collar] = {
+                        name: entry.name,
+                        total: 0
+                    };
+                }
+                userPoints[entry.collar].total += entry.points;
+            });
+
+            const overUsers = Object.entries(userPoints).filter(([collar, data]) => data.total >= 7);
+
+            if (overUsers.length === 0) {
+                list.innerHTML = '<div class="alert alert-success">7ポイント以上使用している人はいません</div>';
+                return;
+            }
+
+            overUsers.forEach(([collar, data]) => {
+                const item = document.createElement('div');
+                item.className = 'entry-item';
+                item.style.borderLeft = '4px solid #ff4444';
+                item.innerHTML = `
+                    <div class="entry-item-header">
+                        <span class="entry-name">襟番 ${collar} - ${data.name}</span>
+                        <span style="font-size: 24px; font-weight: bold; color: #ff4444;">${data.total}P</span>
+                    </div>
+                    <div class="alert alert-warning" style="margin-top: 10px; margin-bottom: 0;">
+                        ⚠️ ポイントが上限を超えています
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // 取り消し履歴更新
+        function refreshCancelHistory() {
+            const list = document.getElementById('cancelHistoryList');
+            list.innerHTML = '';
+        
+            if (appData.cancelHistory.length === 0) {
+                list.innerHTML = '<div class="alert alert-warning">取り消し履歴がありません</div>';
+                return;
+            }
+        
+            [...appData.cancelHistory].reverse().forEach(log => {
+                const item = document.createElement('div');
+                item.className = 'entry-item';
+                const cancelDate = new Date(log.canceledAt);
+                item.innerHTML = `
+                    <div class="entry-item-header">
+                        <span class="entry-name">襟番 ${log.collar} - ${log.name}</span>
+                        <span style="font-size: 12px; color: #666;">${cancelDate.toLocaleString('ja-JP')}</span>
+                    </div>
+                    <div class="entry-details">
+                        <span class="entry-date">${log.date}</span>
+                        <span class="entry-badge ${log.shift === 'early' ? 'badge-early' : 'badge-late'}">
+                            ${log.shift === 'early' ? '☀️ 早番' : '🌙 遅番'}
+                        </span>
+                        <span class="entry-badge badge-points">${log.points}ポイント</span>
+                    </div>
+                    <div style="margin-top: 8px; font-size: 12px; color: #666;">
+                        取り消し実行者: ${log.canceledByName ? `襟番 ${log.canceledBy}（${log.canceledByName}）` : `襟番 ${log.canceledBy}`}
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // 日程設定保存
+        function saveDateSettings() {
+            const startDate = document.getElementById('lotteryStartDate').value;
+            const endDate = document.getElementById('lotteryEndDate').value;
+            const deadline = document.getElementById('applicationDeadline').value;
+
+            if (!startDate || !endDate || !deadline) {
+                alert('すべての項目を入力してください');
+                return;
+            }
+
+            appData.settings = {
+                startDate: startDate,
+                endDate: endDate,
+                deadline: deadline
+            };
+
+            alert('日程設定を保存しました');
+            closeModal('dateSettingModal');
+            generateDateList();
+        }
+
+        // タブ切り替え
+        function switchTab(tabName, event) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            document.getElementById(tabName).classList.add('active');
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
+
+            if (tabName === 'status') {
+                refreshStatusList();
+            } else if (tabName === 'results') {
+                refreshResultsList();
+            }
+        }
+
+        // モーダル操作
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+            
+            if (modalId === 'entryManageModal') {
+                refreshAdminEntryList();
+            } else if (modalId === 'overPointModal') {
+                refreshOverPointList();
+            } else if (modalId === 'cancelHistoryModal') {
+                refreshCancelHistory();
+            } else if (modalId === 'userManageModal') {
+                refreshUserList();
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // ページ読み込み時に初期化
+        window.onload = init;
+    </script>
+</body>
+</html>
