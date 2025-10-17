@@ -1,0 +1,913 @@
+<!doctype html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>勤務休み交換デモ</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 480px;
+            margin: 40px auto 0 auto;
+            background: rgba(255,255,255,0.97);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.13);
+            overflow: hidden;
+        }
+        header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 24px 24px 12px 24px;
+            text-align: center;
+            border-radius: 20px 20px 0 0;
+        }
+        header h2 {
+            font-size: 24px;
+            font-weight: 400;
+            margin-bottom: 8px;
+            letter-spacing: 0.05em;
+        }
+        #userPanel {
+            font-size: 14px;
+            margin-top: 6px;
+        }
+        .main-card {
+            padding: 32px 24px 24px 24px;
+        }
+        .card {
+            background: #f8f9fa;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(100,100,100,0.08);
+            padding: 24px 18px;
+            margin-bottom: 18px;
+        }
+        h3 {
+            font-size: 20px;
+            color: #764ba2;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+        label {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 15px;
+            margin-bottom: 4px;
+            display: block;
+        }
+        input, select, textarea {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            width: 100%;
+            font-size: 16px;
+            margin-bottom: 14px;
+            background: #fff;
+            box-sizing: border-box;
+        }
+        textarea {
+            resize: vertical;
+        }
+        button {
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(142,68,173,0.13);
+            margin: 8px 0;
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        button:hover {
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+            box-shadow: 0 4px 16px rgba(142,68,173,0.18);
+        }
+        .flex {
+            display: flex;
+            gap: 14px;
+            align-items: center;
+        }
+        .req {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 1px 6px rgba(100,100,100,0.07);
+            padding: 14px 12px;
+            margin-bottom: 10px;
+            font-size: 15px;
+        }
+        .req strong {
+            color: #764ba2;
+            font-size: 1.1em;
+        }
+        .muted {
+            color: #888;
+            font-size: 13px;
+        }
+        .main-menu-btns {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            margin-top: 18px;
+        }
+        .main-menu-btns button {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            font-size: 18px;
+            padding: 18px 0;
+            border-radius: 16px;
+            margin: 0;
+        }
+        .main-menu-btns button:hover {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+        }
+        @media (max-width: 600px) {
+            .container { max-width: 99vw; }
+            .main-card, .card { padding: 12px 6px; }
+            header { padding: 16px 6px 8px 6px; }
+            h2 { font-size: 18px; }
+            h3 { font-size: 16px; }
+            button { font-size: 14px; padding: 10px 8px; }
+            input, select, textarea { font-size: 13px; padding: 8px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h2>勤務休み交換アプリ（デモ）</h2>
+            <div id="userPanel"></div>
+        </header>
+        <div id="main" class="main-card"></div>
+    </div>
+<script>
+/*
+    シンプルなローカルデモアプリ。
+    - ユーザー認証（社員番号 + パスワードハッシュ）
+    - カレンダー表示（勤務/休み）
+    - 休み交換申請、承認・拒否、履歴
+    - 管理者機能（強制変更）
+    データは localStorage に保存（デモ用）
+*/
+
+/* ---------- ユーティリティ ---------- */
+async function hashHex(text) {
+    const enc = new TextEncoder();
+    const data = enc.encode(text);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function todayISO() { return new Date().toISOString().slice(0,10); }
+function dateKey(d){ return (d instanceof Date) ? d.toISOString().slice(0,10) : d; }
+function load(key, def){ const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; }
+function save(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+
+/* ---------- 初期データ（デモ用） ---------- */
+const SAMPLE_USERS = [
+    { user_id: "1001", name: "田中 太郎", team: "A", email: "t@example.com", plainPwd: "pass1", isAdmin:false },
+    { user_id: "1002", name: "佐藤 花子", team: "B", email: "s@example.com", plainPwd: "pass2", isAdmin:false },
+    { user_id: "9000", name: "管理者", team: "Admin", email:"admin@example.com", plainPwd:"admin", isAdmin:true }
+];
+
+async function ensureData(){
+    if(!localStorage.getItem('users')){
+        const users = [];
+        for(const u of SAMPLE_USERS){
+            users.push({
+                user_id: u.user_id,
+                name: u.name,
+                team: u.team,
+                email: u.email,
+                passwordHash: await hashHex(u.plainPwd),
+                isAdmin: !!u.isAdmin
+            });
+        }
+        save('users', users);
+    }
+    if(!localStorage.getItem('shifts')){
+        // 今月のサンプル勤務表を簡易生成：各日ランダムで1人休み（off）を割当
+        const users = load('users',[]);
+        const shifts = [];
+        const now = new Date();
+        const year = now.getFullYear(), month = now.getMonth();
+        const days = new Date(year, month+1, 0).getDate();
+        for(let d=1; d<=days; d++){
+            const date = new Date(year, month, d).toISOString().slice(0,10);
+            users.forEach((u,i)=>{
+                const isOff = (Math.floor(Math.random()*6) === 0); // 約1/6休み
+                shifts.push({ date, user_id: u.user_id, type: isOff ? 'off' : 'work' });
+            });
+        }
+        save('shifts', shifts);
+    }
+    if(!localStorage.getItem('swap_requests')) save('swap_requests', []);
+    if(!localStorage.getItem('swap_history')) save('swap_history', []);
+}
+let currentUser = null;
+
+/* ---------- 認証 UI ---------- */
+async function showLogin(onSuccess){
+    const main = document.getElementById('main');
+    main.innerHTML = `
+        <div class="card">
+            <h3>ログイン</h3>
+            <div style="max-width:420px">
+                <label>社員番号<input id="emp" /></label><br/><br/>
+                <label>パスワード<input id="pwd" type="password" /></label><br/><br/>
+                <div class="flex"><button id="loginBtn">ログイン</button><div class="muted">デモ: 1001/pass1, 1002/pass2, 9000/admin</div></div>
+                <div id="loginMsg" class="muted"></div>
+            </div>
+        </div>
+    `;
+    document.getElementById('loginBtn').onclick = async ()=>{
+        const emp = document.getElementById('emp').value.trim();
+        const pwd = document.getElementById('pwd').value;
+        const hash = await hashHex(pwd);
+        const users = load('users',[]);
+        const u = users.find(x=>x.user_id===emp && x.passwordHash===hash);
+        if(u){
+            currentUser = u;
+            renderHeader();
+            if(onSuccess) onSuccess();
+            else renderApp();
+        } else {
+            document.getElementById('loginMsg').textContent = '社員番号またはパスワードが違います';
+        }
+    };
+}
+
+/* ---------- 共通ヘッダ ---------- */
+function renderHeader(){
+    const panel = document.getElementById('userPanel');
+    if(!currentUser){ panel.innerHTML = ''; return; }
+    panel.innerHTML = `
+        <div class="muted">ログイン: ${currentUser.name} (${currentUser.team})</div>
+        <div style="margin-left:12px">
+            <button id="logoutBtn">ログアウト</button>
+        </div>
+    `;
+    document.getElementById('logoutBtn').onclick = ()=>{ currentUser=null; renderApp(); };
+}
+
+/* ---------- カレンダー生成 ---------- */
+function buildCalendarForUser(year, month, userId){
+    const first = new Date(year, month, 1);
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+    const shifts = load('shifts',[]);
+    const dayCells = [];
+    for(let d=1; d<=daysInMonth; d++){
+        const date = new Date(year, month, d).toISOString().slice(0,10);
+        const userShift = shifts.find(s=>s.date===date && s.user_id===userId);
+        dayCells.push({ date, type: userShift ? userShift.type : 'work' });
+    }
+    return dayCells;
+}
+
+/* ---------- 週変希望をする ---------- */
+function showSwapRequestForm() {
+    if (!currentUser) {
+        showLogin(showSwapRequestForm);
+        return;
+    }
+    const main = document.getElementById('main');
+    // 現在のユーザーの班が数値であれば選択に反映、なければ1を初期値にする
+    const userTeamVal = (currentUser && /^[1-7]$/.test(String(currentUser.team))) ? String(currentUser.team) : '1';
+    main.innerHTML = `
+        <div class="card">
+            <h3>週変希望をする</h3>
+            <label>自身の班
+                <select id="reqTeam">
+                    <option value="1">1班</option><option value="2">2班</option><option value="3">3班</option>
+                    <option value="4">4班</option><option value="5">5班</option><option value="6">6班</option>
+                    <option value="7">7班</option>
+                </select>
+            </label>
+            <label>希望する日<input id="swapDate" type="date" value="${todayISO()}" /></label><br/><br/>
+            <label>メッセージ<textarea id="swapMsg" rows="2" placeholder="例: この日休みをあげるので交換してください"></textarea></label><br/><br/>
+            <div class="flex"><button id="sendSwapReqBtn">申請送信</button><div id="swapSendMsg" class="muted"></div></div>
+            <div style="margin-top:12px;"><button id="backToMenuFromReqBtn">メニューに戻る</button></div>
+        </div>
+    `;
+    document.getElementById('reqTeam').value = userTeamVal;
+    document.getElementById('sendSwapReqBtn').onclick = async () => {
+        const date = document.getElementById('swapDate').value;
+        const msg = document.getElementById('swapMsg').value.trim();
+        const team = parseInt(document.getElementById('reqTeam').value,10);
+        const sendMsg = document.getElementById('swapSendMsg');
+        if (!date) { sendMsg.textContent = '日付を選択してください'; return; }
+        const swapRequests = load('swap_requests', []);
+        const id = 'S' + Date.now();
+        swapRequests.push({
+            request_id: id,
+            date,
+            requester_id: currentUser.user_id,
+            requester_team: team,
+            message: msg,
+            created_at: new Date().toISOString()
+        });
+        save('swap_requests', swapRequests);
+        sendMsg.textContent = '申請を送信しました';
+        setTimeout(() => { sendMsg.textContent = ''; renderApp(); }, 800);
+    };
+    document.getElementById('backToMenuFromReqBtn').onclick = renderApp;
+}
+
+/* ---------- 週変希望を見る ---------- */
+function showSwapRequests() {
+    if (!currentUser) {
+        showLogin(showSwapRequests);
+        return;
+    }
+    const main = document.getElementById('main');
+    const requests = load('swap_requests', []);
+    // 並び替えUI追加
+    main.innerHTML = `
+        <div class="card">
+            <h3>週変希望を見る</h3>
+            <div style="margin-bottom:10px;">
+                <label>並び替え:
+                    <select id="sortSwapReq">
+                        <option value="dateAsc">日付昇順</option>
+                        <option value="dateDesc">日付降順</option>
+                        <option value="anyReturn">返す日未提案優先</option>
+                        <option value="hasReturn">返す日提案済優先</option>
+                    </select>
+                </label>
+            </div>
+            <div id="swapRequestsList"></div>
+            <div style="margin-top:12px;"><button id="backToMenuFromListBtn">メニューに戻る</button></div>
+        </div>
+    `;
+    const listDiv = document.getElementById('swapRequestsList');
+
+    function renderList(sortType) {
+        listDiv.innerHTML = '';
+        let sorted = [...requests];
+        if (sortType === 'dateAsc') {
+            sorted.sort((a, b) => a.date.localeCompare(b.date));
+        } else if (sortType === 'dateDesc') {
+            sorted.sort((a, b) => b.date.localeCompare(a.date));
+        } else if (sortType === 'anyReturn') {
+            // 返す日未提案（negotiations未設定 or 空）を先頭
+            sorted.sort((a, b) => {
+                const aHasNeg = a.negotiations && a.negotiations.length > 0;
+                const bHasNeg = b.negotiations && b.negotiations.length > 0;
+                if (aHasNeg === bHasNeg) return a.date.localeCompare(b.date);
+                return aHasNeg ? 1 : -1;
+            });
+        } else if (sortType === 'hasReturn') {
+            // 返す日提案済（negotiationsあり）を先頭
+            sorted.sort((a, b) => {
+                const aHasNeg = a.negotiations && a.negotiations.length > 0;
+                const bHasNeg = b.negotiations && b.negotiations.length > 0;
+                if (aHasNeg === bHasNeg) return a.date.localeCompare(b.date);
+                return aHasNeg ? -1 : 1;
+            });
+        }
+        sorted.forEach(req => {
+            const reqDiv = document.createElement('div');
+            reqDiv.className = 'req';
+            const teamText = req.requester_team ? `（申請者班: ${req.requester_team}班）` : '';
+            // 返す日（提案日）がある場合は表示
+            let returnText = '';
+            if (req.negotiations && req.negotiations.length > 0) {
+                const lastNeg = req.negotiations[req.negotiations.length-1];
+                returnText = `<span style="color:#27ae60;">返す日: ${lastNeg.proposed_date}</span>`;
+            } else {
+                returnText = `<span style="color:#888;">返す日: 未提案（いつでも可）</span>`;
+            }
+            reqDiv.innerHTML = `<div><strong>${req.date}</strong> - ${req.message} ${teamText}<br>${returnText}</div>
+                <div style="margin-top:8px;" class="flex">
+                    <button class="proposeBtn" data-id="${req.request_id}">提案する</button>
+                </div>`;
+            listDiv.appendChild(reqDiv);
+        });
+        // 各提案ボタンで交渉フォームを開く
+        listDiv.querySelectorAll('.proposeBtn').forEach(btn=>{
+            btn.onclick = ()=>{ showNegotiationForm(btn.dataset.id, true); };
+        });
+    }
+
+    // 初期表示は日付昇順
+    renderList('dateAsc');
+    document.getElementById('sortSwapReq').onchange = function() {
+        renderList(this.value);
+    };
+    document.getElementById('backToMenuFromListBtn').onclick = renderApp;
+}
+
+/* ---------- 交渉フォーム ---------- */
+function showNegotiationForm(requestId, isNew = false) {
+    const requests = load('swap_requests', []);
+    const req = requests.find(r => r.request_id === requestId);
+    if(!req) return;
+    if(!currentUser){ showLogin(()=>showNegotiationForm(requestId,isNew)); return; }
+
+    // 申請者の班（休み候補を出す班）は申請データから取得
+    const requesterTeamVal = req.requester_team ? parseInt(req.requester_team, 10) : 1;
+
+    // 休み候補を作る（今日から120日分、申請者の班で判定）
+    function getRestCandidatesForTeam(team, spanDays=120){
+        const arr = [];
+        const start = new Date();
+        start.setHours(0,0,0,0);
+        for(let i=0;i<spanDays;i++){
+            const d = new Date(start); d.setDate(start.getDate() + i);
+            const shift = getShiftForDate(d, team);
+            if(!isWorkDay(shift) && !isWDay(d)){
+                arr.push(d.toISOString().slice(0,10));
+            }
+        }
+        return arr;
+    }
+
+    const candidates = getRestCandidatesForTeam(requesterTeamVal);
+
+    const main = document.getElementById('main');
+    main.innerHTML = `
+        <div class="card">
+            <h3>${isNew ? '新規' : '追加入力'}: 週変希望に対する日程提案</h3>
+            <div><strong>${req.date}</strong> - ${req.message}</div>
+            <label>申請者の班: ${requesterTeamVal}班</label>
+            <label>提案日
+                <select id="negDateSelect"></select>
+            </label>
+            <div class="flex">
+                <button id="sendNegBtn">送信</button>
+                <div id="negSendMsg" class="muted"></div>
+            </div>
+            <div style="margin-top:16px;"><button id="backToRequestsBtn">戻る</button></div>
+        </div>
+    `;
+
+    // 提案日候補を申請者の班の休みのみでセット
+    function populateCandidates(){
+        const list = getRestCandidatesForTeam(requesterTeamVal);
+        const sel = document.getElementById('negDateSelect');
+        sel.innerHTML = '';
+        if(list.length===0){
+            const opt = document.createElement('option'); opt.value=''; opt.textContent='候補となる休みがありません';
+            sel.appendChild(opt);
+        } else {
+            list.forEach(d=>{
+                const opt = document.createElement('option'); opt.value=d; opt.textContent=d;
+                sel.appendChild(opt);
+            });
+        }
+    }
+    populateCandidates();
+
+    document.getElementById('backToRequestsBtn').onclick = () => { showSwapRequests(); };
+
+    document.getElementById('sendNegBtn').onclick = () => {
+        const date = document.getElementById('negDateSelect').value;
+        const negSendMsg = document.getElementById('negSendMsg');
+        if (!date) { negSendMsg.textContent = '日程を選択してください'; return; }
+        // 申請日と提案日の週にWがないことを確認
+        if(weekContainsW(req.date) || weekContainsW(date) || isWDay(new Date(date))){
+            negSendMsg.textContent = '申請日または提案日の週にWが含まれています。Wのある週では週変できません';
+            return;
+        }
+        // 管理者設定の範囲チェック
+        if(!isWithinAdminRange(date)){
+            negSendMsg.textContent = '提案日は管理者が設定した交換可能期間外です。別の日を選んでください';
+            return;
+        }
+        if (!req.negotiations) req.negotiations = [];
+        req.negotiations.push({
+            from: currentUser.user_id,
+            proposed_date: date,
+            at: new Date().toISOString()
+        });
+        const requests = load('swap_requests', []);
+        const idx = requests.findIndex(r => r.request_id === requestId);
+        requests[idx] = req;
+        save('swap_requests', requests);
+        negSendMsg.textContent = '日程を提案しました';
+        setTimeout(() => { showNegotiations(); }, 800);
+    };
+}
+
+/* ---------- 管理者画面 ---------- */
+function showAdminPanel() {
+    if(!currentUser || !currentUser.isAdmin) { showLogin(showAdminPanel); return; }
+
+    const main = document.getElementById('main');
+    let config = load('admin_config', { minDate: todayISO(), maxDate: "", oneYear: false, boxes: null });
+
+    function ensureBoxes(cfg){
+        if(cfg.boxes && Array.isArray(cfg.boxes) && cfg.boxes.length === 13) return cfg.boxes;
+        const boxes = [];
+        const baseDate = cfg.minDate ? new Date(cfg.minDate) : new Date();
+        baseDate.setHours(0,0,0,0);
+        for(let i=0;i<13;i++){
+            const s = new Date(baseDate);
+            s.setDate(baseDate.getDate() + i * 28);
+            const e = new Date(s);
+            e.setDate(s.getDate() + 27);
+            boxes.push({ enabled: true, start: s.toISOString().slice(0,10), end: e.toISOString().slice(0,10) });
+        }
+        return boxes;
+    }
+
+    config.boxes = ensureBoxes(config);
+
+    // build HTML for 13 BOX rows
+    const boxesRows = config.boxes.map((b, idx) => {
+        const num = idx+1;
+        return `
+            <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
+                <label style="width:60px;font-weight:600;">BOX${num}</label>
+                <label style="display:flex;flex-direction:column;flex:1;">
+                    <span style="font-size:12px;color:#666;">開始</span>
+                    <input type="date" class="boxStart" data-idx="${idx}" value="${b.start || ''}">
+                </label>
+                <label style="display:flex;flex-direction:column;flex:1;">
+                    <span style="font-size:12px;color:#666;">終了</span>
+                    <input type="date" class="boxEnd" data-idx="${idx}" value="${b.end || ''}">
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;">
+                    <input type="checkbox" class="boxEnabled" data-idx="${idx}" ${b.enabled ? 'checked' : ''}/> 有効
+                </label>
+            </div>
+        `;
+    }).join('');
+
+    main.innerHTML = `
+        <div class="card">
+            <h3>管理者画面</h3>
+            <label>週変で返す日（交換可能期間）</label>
+            <div class="flex" style="gap:8px;align-items:center;">
+                <input type="date" id="adminMinDate" value="${config.minDate}">
+                <span style="margin:0 6px;">〜</span>
+                <input type="date" id="adminMaxDate" value="${config.maxDate}">
+                <button id="saveAdminConfigBtn">保存</button>
+            </div>
+
+            <div style="margin-top:12px;font-weight:600;">BOX設定（1年を13BOXに分割）:</div>
+            <div id="boxesContainer" style="margin-top:8px;">${boxesRows}</div>
+
+            <div id="adminMsg" class="muted" style="margin-top:8px;"></div>
+            <div style="margin-top:16px;"><button id="backBtn">メニューに戻る</button></div>
+        </div>
+    `;
+
+    const minEl = document.getElementById('adminMinDate');
+    const maxEl = document.getElementById('adminMaxDate');
+
+    document.getElementById('saveAdminConfigBtn').onclick = () => {
+        config.minDate = minEl.value;
+        config.maxDate = maxEl.value;
+        // read per-box inputs
+        const boxStarts = Array.from(document.querySelectorAll('.boxStart'));
+        const boxEnds = Array.from(document.querySelectorAll('.boxEnd'));
+        const boxEnableds = Array.from(document.querySelectorAll('.boxEnabled'));
+        const newBoxes = [];
+        for(let i=0;i<13;i++){
+            newBoxes.push({
+                enabled: !!boxEnableds[i].checked,
+                start: boxStarts[i].value || '',
+                end: boxEnds[i].value || ''
+            });
+        }
+        config.boxes = newBoxes;
+        save('admin_config', config);
+        const msg = document.getElementById('adminMsg');
+        msg.textContent = '保存しました';
+        setTimeout(()=>{ msg.textContent = ''; }, 1200);
+    };
+
+    document.getElementById('backBtn').onclick = renderApp;
+}
+
+/* ---------- ヘルパー: BOX判定（1..13） ---------- */
+function getBoxIndex(date){
+    const cfg = load('admin_config', { minDate:'', maxDate:'', boxes: null });
+    const d = (date instanceof Date) ? new Date(date) : new Date(date);
+    d.setHours(0,0,0,0);
+
+    // 有効なBOXの期間のみ判定
+    if(cfg.boxes && Array.isArray(cfg.boxes) && cfg.boxes.length === 13){
+        for(let i=0;i<13;i++){
+            const b = cfg.boxes[i];
+            if(!b || !b.enabled) continue; // 有効なBOXのみ
+            if(!b.start || !b.end) continue; // 期間未設定は無視
+            const s = new Date(b.start); s.setHours(0,0,0,0);
+            const e = new Date(b.end); e.setHours(0,0,0,0);
+            if(d >= s && d <= e) return i+1;
+        }
+        // どの有効BOXにも該当しない
+        return null;
+    }
+
+    // Fallback: if no explicit ranges, compute sequential 28-day boxes from minDate
+    if(!cfg.minDate) return null;
+    const base = new Date(cfg.minDate); base.setHours(0,0,0,0);
+    const daysDiff = Math.floor((d - base) / (1000*60*60*24));
+    if(daysDiff < 0) return null;
+    const boxLen = 28;
+    const idx = Math.floor(daysDiff / boxLen) + 1;
+    if(idx < 1 || idx > 13) return null;
+    return idx;
+}
+
+/* ---------- ヘルパー: 管理者設定の範囲チェック（BOX考慮） ---------- */
+function isWithinAdminRange(date) {
+    const cfg = load('admin_config', { minDate: '', maxDate: '', boxes: null });
+    if(!cfg || !cfg.boxes || !Array.isArray(cfg.boxes) || cfg.boxes.length !== 13) return true;
+    const d = (date instanceof Date) ? new Date(date) : new Date(date);
+    d.setHours(0,0,0,0);
+
+    // 有効なBOXの期間のみ許可
+    let found = false;
+    for(let i=0;i<cfg.boxes.length;i++){
+        const b = cfg.boxes[i];
+        if(!b || !b.enabled) continue;
+        if(!b.start || !b.end) continue;
+        const s = new Date(b.start); s.setHours(0,0,0,0);
+        const e = new Date(b.end); e.setHours(0,0,0,0);
+        if(d >= s && d <= e) {
+            found = true;
+            break;
+        }
+    }
+    return found;
+}
+
+/* ---------- メイン UI ---------- */
+function renderApp(){
+    renderHeader();
+    const main = document.getElementById('main');
+    main.innerHTML = `
+        <div class="card">
+            <h3>メニュー</h3>
+            <div class="main-menu-btns">
+                <button id="showSwapRequestFormBtn">週変希望をする</button>
+                <button id="showSwapRequestsBtn">週変希望を見る</button>
+                <button id="showNegotiationsBtn">交渉中</button>
+                <button id="showAdminPanelBtn">管理者画面</button>
+                <button id="resetDataBtn" style="background:linear-gradient(135deg,#e74c3c,#c0392b);margin-top:12px;">データリセット</button>
+            </div>
+        </div>
+    `;
+    document.getElementById('showSwapRequestFormBtn').onclick = showSwapRequestForm;
+    document.getElementById('showSwapRequestsBtn').onclick = showSwapRequests;
+    document.getElementById('showNegotiationsBtn').onclick = showNegotiations;
+    document.getElementById('showAdminPanelBtn').onclick = showAdminPanel;
+    document.getElementById('resetDataBtn').onclick = async function() {
+        if(confirm('すべての投稿・履歴・設定データを消去します。よろしいですか？')){
+            localStorage.clear();
+            currentUser = null;
+            await ensureData();
+            renderApp();
+        }
+    };
+}
+
+/* ---------- 交渉中: 成立ボタンでの管理者範囲チェックを追加 ---------- */
+function showNegotiations() {
+    if (!currentUser) {
+        showLogin(showNegotiations);
+        return;
+    }
+    const main = document.getElementById('main');
+    const requests = load('swap_requests', []);
+    const myRequests = requests.filter(r => r.requester_id === currentUser.user_id);
+    const receivedRequests = requests.filter(r => r.negotiations && r.negotiations.find(n => n.from === currentUser.user_id));
+    main.innerHTML = `
+        <div class="card">
+            <h3>交渉中の週変希望</h3>
+            <h4>自分からの申請</h4>
+            <div id="myRequestsList"></div>
+            <h4>自分への提案</h4>
+            <div id="receivedRequestsList"></div>
+            <div style="margin-top:12px;"><button id="backToMenuFromNegBtn">メニューに戻る</button></div>
+        </div>
+    `;
+    const myListDiv = document.getElementById('myRequestsList');
+    const receivedListDiv = document.getElementById('receivedRequestsList');
+
+    function refreshLists() {
+        myListDiv.innerHTML = '';
+        receivedListDiv.innerHTML = '';
+
+        myRequests.forEach(req => {
+            const reqDiv = document.createElement('div');
+            reqDiv.className = 'req';
+            reqDiv.innerHTML = `
+                <div><strong>${req.date}</strong> - ${req.message}</div>
+                <div class="flex" style="margin-top:8px;">
+                    <button class="acceptBtn" data-id="${req.request_id}">成立</button>
+                    <button class="rejectBtn" data-id="${req.request_id}">不成立</button>
+                    <button class="negotiateBtn" data-id="${req.request_id}">再提案</button>
+                </div>
+            `;
+            myListDiv.appendChild(reqDiv);
+        });
+
+        receivedRequests.forEach(req => {
+            const reqDiv = document.createElement('div');
+            reqDiv.className = 'req';
+            const myNeg = req.negotiations.find(n => n.from === currentUser.user_id);
+            reqDiv.innerHTML = `
+                <div><strong>${req.date}</strong> - ${req.message} ${myNeg ? '(提案中)' : ''}</div>
+                <div class="flex" style="margin-top:8px;">
+                    ${myNeg ? `<button class="cancelNegBtn" data-id="${req.request_id}">提案取消</button>` : `<button class="acceptBtn" data-id="${req.request_id}">成立</button>`}
+                    <button class="rejectBtn" data-id="${req.request_id}">不成立</button>
+                    ${!myNeg ? `<button class="negotiateBtn" data-id="${req.request_id}">再提案</button>` : ''}
+                </div>
+            `;
+            receivedListDiv.appendChild(reqDiv);
+        });
+
+        // 成立・不成立・再提案
+        myListDiv.querySelectorAll('.acceptBtn').forEach(btn => {
+            btn.onclick = () => {
+                const reqId = btn.dataset.id;
+                const requests = load('swap_requests', []);
+                const req = requests.find(r => r.request_id === reqId);
+                if (req && req.negotiations.length) {
+                    const last = req.negotiations[req.negotiations.length-1];
+                    // 管理者範囲チェック（申請日と提案日両方）
+                    if(!isWithinAdminRange(req.date) || (last && last.proposed_date && !isWithinAdminRange(last.proposed_date))){
+                        alert("成立できません: 申請日または提案日が管理者が設定した交換可能期間外です。");
+                        return;
+                    }
+                    // W週チェックも行う（既存ルール）
+                    if(weekContainsW(req.date) || (last && last.proposed_date && (weekContainsW(last.proposed_date) || isWDay(new Date(last.proposed_date))))){
+                        alert('申請日または返却日の週にWが含まれています。Wのある週では週変できません。');
+                        return;
+                    }
+                    req.negotiations[req.negotiations.length-1].result = "accepted";
+                    req.state = "closed";
+                    save('swap_requests', requests);
+                    alert("週変が成立しました！");
+                    showNegotiations();
+                }
+            };
+        });
+        myListDiv.querySelectorAll('.rejectBtn').forEach(btn => {
+            btn.onclick = () => {
+                const reqId = btn.dataset.id;
+                const requests = load('swap_requests', []);
+                const req = requests.find(r => r.request_id === reqId);
+                if (req) {
+                    req.state = "rejected";
+                    save('swap_requests', requests);
+                    alert("週変が拒否されました");
+                    showNegotiations();
+                }
+            };
+        });
+        myListDiv.querySelectorAll('.negotiateBtn').forEach(btn => {
+            btn.onclick = () => {
+                const reqId = btn.dataset.id;
+                showNegotiationForm(reqId, false);
+            };
+        });
+        receivedListDiv.querySelectorAll('.acceptBtn').forEach(btn => {
+            btn.onclick = () => {
+                const reqId = btn.dataset.id;
+                const requests = load('swap_requests', []);
+                const req = requests.find(r => r.request_id === reqId);
+                if (req && req.negotiations.length) {
+                    const last = req.negotiations[req.negotiations.length-1];
+                    // 管理者範囲チェック（申請日と提案日両方）
+                    if(!isWithinAdminRange(req.date) || (last && last.proposed_date && !isWithinAdminRange(last.proposed_date))){
+                        alert("成立できません: 申請日または提案日が管理者が設定した交換可能期間外です。");
+                        return;
+                    }
+                    // W週チェックも行う（既存ルール）
+                    if(weekContainsW(req.date) || (last && last.proposed_date && (weekContainsW(last.proposed_date) || isWDay(new Date(last.proposed_date))))){
+                        alert('申請日または返却日の週にWが含まれています。Wのある週では週変できません。');
+                        return;
+                    }
+                    req.negotiations[req.negotiations.length-1].result = "accepted";
+                    req.state = "closed";
+                    save('swap_requests', requests);
+                    alert("週変が成立しました！");
+                    showNegotiations();
+                }
+            };
+        });
+        receivedListDiv.querySelectorAll('.rejectBtn').forEach(btn => {
+            btn.onclick = () => {
+                const reqId = btn.dataset.id;
+                const requests = load('swap_requests', []);
+                const req = requests.find(r => r.request_id === reqId);
+                if (req) {
+                    req.state = "rejected";
+                    save('swap_requests', requests);
+                    alert("週変が拒否されました");
+                    showNegotiations();
+                }
+            };
+        });
+        receivedListDiv.querySelectorAll('.negotiateBtn').forEach(btn => {
+            btn.onclick = () => {
+                const reqId = btn.dataset.id;
+                showNegotiationForm(reqId, false);
+            };
+        });
+        myListDiv.querySelectorAll('.cancelNegBtn').forEach(btn => {
+            btn.onclick = () => {
+                const reqId = btn.dataset.id;
+                const requests = load('swap_requests', []);
+                const req = requests.find(r => r.request_id === reqId);
+                if (req) {
+                    req.negotiations = req.negotiations.filter(n => n.from !== currentUser.user_id);
+                    if(req.negotiations.length === 0) req.state = "open";
+                    save('swap_requests', requests);
+                    alert("提案を取消しました");
+                    showNegotiations();
+                }
+            };
+        });
+    }
+    refreshLists();
+    document.getElementById('backToMenuFromNegBtn').onclick = renderApp;
+}
+
+/* ---------- 追加: W週 / 出番判定の最小ユーティリティ（shift_calendar_full_search を参照） ---------- */
+const initialWDate = new Date(2025,0,26); // 2025-01-26
+const cycleLength = 28;
+const teamInitialShifts = {
+    1: 3, 2: 2, 3: 1, 4: 0, 5: 6, 6: 5, 7: 4
+};
+const shiftCycle = ['1の出','2の出','3の出','4の出','5の出','指定休','公休'];
+
+function isWDay(date){
+    const d = (date instanceof Date) ? new Date(date) : new Date(date);
+    d.setHours(0,0,0,0);
+    const daysDiff = Math.floor((d - initialWDate) / (1000*60*60*24));
+    return daysDiff >= 0 && daysDiff % cycleLength === 0;
+}
+
+function calculateShift(date, team){
+    // 簡易版：基準日からのズレでインデックス推定（完全互換でないがデモ用途）
+    const d = new Date(date); d.setHours(0,0,0,0);
+    const daysDiff = Math.floor((d - initialWDate) / (1000*60*60*24));
+    let idx = teamInitialShifts[team] || 0;
+    if(daysDiff === 0) return shiftCycle[idx];
+    const dir = daysDiff > 0 ? 1 : -1;
+    const steps = Math.abs(daysDiff);
+    for(let i=0;i<steps;i++){
+        // W日の扱い簡略化：W日は日付基準で判定してスキップ相当の進め方
+        const cur = new Date(initialWDate);
+        cur.setDate(initialWDate.getDate() + (dir>0? i : -i));
+        if(isWDay(cur)){
+            // 当該日は W として扱い（次の出番進行は 2日分相当）
+            idx = (idx + (dir>0?1:-1) + shiftCycle.length) % shiftCycle.length;
+            // advance extra for W's doubling effect approximated
+        } else {
+            idx = (idx + (dir>0?1:-1) + shiftCycle.length) % shiftCycle.length;
+        }
+    }
+    return shiftCycle[idx];
+}
+
+function getShiftForDate(date, team){
+    const d = (date instanceof Date) ? new Date(date) : new Date(date);
+    if(isWDay(d)) return `W(${calculateShift(d,team)})`;
+    const prev = new Date(d); prev.setDate(d.getDate()-1);
+    if(isWDay(prev)) return calculateShift(prev, team);
+    return calculateShift(d, team);
+}
+
+function isWorkDay(shift){
+    return shift.includes('の出');
+}
+
+function weekContainsW(date){
+    const d = (typeof date === 'string') ? new Date(date) : new Date(date);
+    d.setHours(0,0,0,0);
+    // 週の開始を日曜とする（shift_calendar_full_search に合わせる）
+    const start = new Date(d); start.setDate(start.getDate() - d.getDay());
+    for(let i=0;i<7;i++){
+        const dd = new Date(start); dd.setDate(start.getDate()+i);
+        if(isWDay(dd)) return true;
+    }
+    return false;
+}
+
+/* ---------- 起動 ---------- */
+(async ()=>{
+    await ensureData();
+    // try auto-login if last user saved
+    const last = load('lastUser', null);
+    if(last){
+        const users = load('users',[]);
+        const u = users.find(x=>x.user_id===last);
+        if(u) currentUser = u;
+    }
+    renderApp();
+})();
+</script>
+</body>
+</html>
